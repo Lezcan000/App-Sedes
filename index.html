@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Sedes - En Línea</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #2180a1; --primary-hover: #1a6989; --primary-light: rgba(33, 128, 145, 0.1);
+            --secondary: #32b8c6; --success: #27a745; --danger: #dc3545; --warning: #ffc107;
+            --light: #f8f9fa; --dark: #2c3e50; --gray: #6c757d; --border: #dee2e6;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1); --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh; padding: 20px; color: var(--dark);
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; animation: slideDown 0.6s ease; }
+        header h1 { font-size: 2.5em; color: var(--dark); margin-bottom: 10px; font-weight: 700; }
+        header p { color: var(--gray); font-size: 1.1em; }
+        .controls { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; align-items: center; animation: slideUp 0.6s ease; }
+        .search-box { flex: 1; min-width: 250px; position: relative; }
+        .search-box input { width: 100%; padding: 12px 40px 12px 16px; border: 2px solid var(--border); border-radius: 8px; font-size: 1em; transition: all 0.3s ease; background: white; }
+        .search-box input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+        .search-box::after { content: '🔍'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--gray); }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #218838; transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: var(--gray); color: white; }
+        .btn-sm { padding: 8px 12px; font-size: 0.9em; }
+        .table-container { background: white; border-radius: 12px; box-shadow: var(--shadow-lg); overflow: hidden; animation: slideUp 0.8s ease; overflow-x: auto; position: relative; min-height: 200px;}
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        thead { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; font-weight: 600; text-transform: uppercase; font-size: 0.85em; }
+        th { padding: 16px 12px; text-align: left; border: none; }
+        tbody tr { border-bottom: 1px solid var(--border); transition: all 0.3s ease; }
+        tbody tr:hover { background: var(--light); box-shadow: inset 0 0 0 2px rgba(33, 128, 145, 0.05); }
+        td { padding: 14px 12px; font-size: 0.95em; }
+        .actions { display: flex; gap: 6px; }
+        .btn-edit { background: var(--secondary); color: white; }
+        .btn-edit:hover { background: #2aa3af; }
+        .btn-delete { background: var(--danger); color: white; }
+        .btn-delete:hover { background: #c82333; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; animation: fadeIn 0.3s ease; }
+        .modal-content { background: white; border-radius: 12px; box-shadow: var(--shadow-lg); max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; animation: slideUp 0.3s ease; }
+        .modal-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; }
+        .modal-header h2 { margin: 0; font-size: 1.5em; }
+        .close-btn { background: none; border: none; color: white; font-size: 1.5em; cursor: pointer; transition: transform 0.3s ease; }
+        .close-btn:hover { transform: scale(1.2); }
+        .modal-body { padding: 25px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark); }
+        .form-group input, .form-group textarea { width: 100%; padding: 11px; border: 2px solid var(--border); border-radius: 6px; font-size: 1em; font-family: inherit; transition: all 0.3s ease; }
+        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .modal-footer { padding: 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: var(--shadow); text-align: center; animation: slideUp 0.6s ease; }
+        .stat-card h3 { color: var(--gray); font-size: 0.9em; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+        .stat-card .number { font-size: 2em; font-weight: 700; color: var(--primary); }
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--gray); }
+        .toast { position: fixed; top: 20px; right: 20px; background: white; padding: 16px 20px; border-radius: 8px; box-shadow: var(--shadow-lg); animation: slideUp 0.3s ease; z-index: 2000; max-width: 400px; }
+        .toast.success { border-left: 4px solid var(--success); }
+        .toast.error { border-left: 4px solid var(--danger); }
+        
+        /* Loading Overlay */
+        .loader-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.8); z-index: 10;
+            display: flex; justify-content: center; align-items: center;
+            flex-direction: column;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid var(--border);
+            border-top: 4px solid var(--primary); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 10px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @media (max-width: 768px) {
+            .controls { flex-direction: column; }
+            .search-box { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📍 Gestor de Sedes</h1>
+            <p>Secretaría de Participación Ciudadana - Medellín</p>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total de Sedes</h3>
+                <div class="number" id="totalSedes">...</div>
+            </div>
+            <div class="stat-card">
+                <h3>Sedes Sociales</h3>
+                <div class="number" id="totalSociales">...</div>
+            </div>
+            <div class="stat-card">
+                <h3>Centros de Desarrollo</h3>
+                <div class="number" id="totalCDS">...</div>
+            </div>
+            <div class="stat-card">
+                <h3>Comunas Registradas</h3>
+                <div class="number" id="totalComunas">...</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Buscar por nombre, dirección, comuna o ocupante...">
+            </div>
+            <button class="btn btn-primary" onclick="openAddModal()">➕ Agregar Sede</button>
+            <button class="btn btn-primary" onclick="reloadData()">🔄 Recargar</button>
+            <button class="btn btn-success" onclick="exportToExcel()">📥 Exportar Excel</button>
+        </div>
+
+        <div class="table-container">
+            <div id="loader" class="loader-overlay">
+                <div class="spinner"></div>
+                <p>Cargando datos en tiempo real...</p>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Bien Inmueble</th>
+                        <th>Comuna</th>
+                        <th>Dirección</th>
+                        <th>Uso</th>
+                        <th>Ocupante</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <h3>📭 Sin resultados</h3>
+            <p>No se encontraron sedes o la base de datos está vacía.</p>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Agregar Nueva Sede</h2>
+                <button class="close-btn" type="button" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="sedeForm" onsubmit="event.preventDefault();">
+                    <input type="hidden" id="originalNumero"> <div class="form-group">
+                        <label for="numero">Número:</label>
+                        <input type="number" id="numero" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="nombre">Bien Inmueble:</label>
+                        <input type="text" id="nombre" placeholder="Nombre de la sede" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="comuna">Comuna:</label>
+                        <input type="text" id="comuna" placeholder="Ej: 1- POPULAR" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="direccion">Dirección Completa:</label>
+                        <input type="text" id="direccion" placeholder="Dirección completa" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="uso">Destinación o Uso:</label>
+                        <input type="text" id="uso" placeholder="Ej: SEDE SOCIAL" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ocupante">Ocupación por Terceros:</label>
+                        <input type="text" id="ocupante" placeholder="Nombre de la organización">
+                    </div>
+                    <div class="form-group">
+                        <label for="observaciones">Observaciones:</label>
+                        <textarea id="observaciones" placeholder="Notas adicionales"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveSede()">Guardar (Requiere Contraseña)</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // -------------------------------------------------------------
+        // URL ACTUALIZADA CON TU LINK
+        const API_URL = "https://script.google.com/macros/s/AKfycbx9lcc1p12JO82WMHP5GbuDMy_V0poH8uBzH0cLPsCLUWEjb9G7EiiuzwDhfsHOXc9U/exec"; 
+        // -------------------------------------------------------------
+
+        let sedes = [];
+        let editingMode = false;
+
+        // Cargar datos desde la Nube (Google Sheet)
+        async function loadSedes() {
+            document.getElementById('loader').style.display = 'flex';
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                
+                if (Array.isArray(data)) {
+                    sedes = data;
+                    render();
+                    updateStats();
+                    showToast('Datos actualizados en tiempo real', 'success');
+                } else {
+                    console.error("Formato inesperado", data);
+                    showToast('Error de formato de datos', 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('Error de conexión con la base de datos', 'error');
+            } finally {
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        // Función para recargar manual
+        function reloadData() {
+            loadSedes();
+        }
+
+        // Renderizar tabla
+        function render() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = sedes.filter(sede => 
+                (sede.nombre || "").toString().toLowerCase().includes(searchTerm) ||
+                (sede.direccion || "").toString().toLowerCase().includes(searchTerm) ||
+                (sede.comuna || "").toString().toLowerCase().includes(searchTerm) ||
+                (sede.ocupante || "").toString().toLowerCase().includes(searchTerm)
+            );
+
+            const tbody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tbody.innerHTML = filtered.map((sede) => `
+                <tr>
+                    <td>${sede.numero}</td>
+                    <td><strong>${sede.nombre}</strong></td>
+                    <td>${sede.comuna}</td>
+                    <td><small>${sede.direccion}</small></td>
+                    <td>${sede.uso}</td>
+                    <td><small>${sede.ocupante || '-'}</small></td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn btn-edit btn-sm" onclick="openEditModal(${sedes.indexOf(sede)})">✏️</button>
+                            <button class="btn btn-delete btn-sm" onclick="deleteSede(${sedes.indexOf(sede)})">🗑️</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Actualizar estadísticas
+        function updateStats() {
+            document.getElementById('totalSedes').textContent = sedes.length;
+            document.getElementById('totalSociales').textContent = sedes.filter(s => (s.uso || "").toString().toUpperCase().includes('SOCIAL')).length;
+            document.getElementById('totalCDS').textContent = sedes.filter(s => (s.uso || "").toString().toUpperCase().includes('CENTRO') || (s.uso || "").toString().toUpperCase().includes('CDS')).length;
+            const comunas = new Set(sedes.map(s => (s.comuna || "").toString().split('-')[0]));
+            document.getElementById('totalComunas').textContent = comunas.size;
+        }
+
+        function openAddModal() {
+            editingMode = false;
+            document.getElementById('modalTitle').textContent = '➕ Agregar Nueva Sede';
+            document.getElementById('sedeForm').reset();
+            const maxNum = sedes.length > 0 ? Math.max(...sedes.map(s => parseInt(s.numero) || 0)) : 0;
+            document.getElementById('numero').value = maxNum + 1;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function openEditModal(index) {
+            if (index === -1) return;
+            editingMode = true;
+            const sede = sedes[index];
+            document.getElementById('modalTitle').textContent = '✏️ Editar Sede';
+            document.getElementById('originalNumero').value = sede.numero; // Guardamos el numero original
+            document.getElementById('numero').value = sede.numero;
+            document.getElementById('nombre').value = sede.nombre;
+            document.getElementById('comuna').value = sede.comuna;
+            document.getElementById('direccion').value = sede.direccion;
+            document.getElementById('uso').value = sede.uso;
+            document.getElementById('ocupante').value = sede.ocupante;
+            document.getElementById('observaciones').value = sede.observaciones;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            document.getElementById('sedeForm').reset();
+        }
+
+        // Guardar sede (Nueva o Edición)
+        async function saveSede() {
+            const numeroInput = document.getElementById('numero');
+            const nombreInput = document.getElementById('nombre');
+            
+            if(!numeroInput.value || !nombreInput.value) {
+                alert("Complete Número y Nombre.");
+                return;
+            }
+
+            // PEDIR CONTRASEÑA
+            const password = prompt("🔐 Ingrese la contraseña de administrador para guardar cambios:");
+            if (!password) return;
+
+            const sedeData = {
+                action: editingMode ? 'edit' : 'add',
+                password: password,
+                originalNumero: document.getElementById('originalNumero').value, // Solo util si es edicion
+                numero: numeroInput.value,
+                nombre: nombreInput.value,
+                comuna: document.getElementById('comuna').value,
+                direccion: document.getElementById('direccion').value,
+                uso: document.getElementById('uso').value,
+                ocupante: document.getElementById('ocupante').value,
+                observaciones: document.getElementById('observaciones').value
+            };
+
+            // Mostrar cargando
+            const btn = document.querySelector('.modal-footer .btn-primary');
+            const originalText = btn.textContent;
+            btn.textContent = "Guardando...";
+            btn.disabled = true;
+
+            try {
+                // Enviar datos usando fetch POST no-cors o text/plain para evitar preflight complex
+                // Google Apps Script maneja mejor text/plain para CORS simple
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(sedeData)
+                });
+                
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    showToast(result.message, 'success');
+                    closeModal();
+                    loadSedes(); // Recargar datos frescos
+                } else {
+                    alert("Error: " + result.message);
+                }
+            } catch (error) {
+                alert("Error de red: " + error.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Eliminar sede
+        async function deleteSede(index) {
+            if (index === -1) return;
+            const sede = sedes[index];
+
+            if (confirm(`¿Eliminar "${sede.nombre}"? Esto no se puede deshacer.`)) {
+                
+                const password = prompt("🔐 Contraseña de administrador para confirmar eliminación:");
+                if (!password) return;
+
+                document.getElementById('loader').style.display = 'flex'; // Loader global
+
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'delete',
+                            password: password,
+                            numero: sede.numero,
+                            nombre: sede.nombre
+                        })
+                    });
+                    
+                    const result = await response.json();
+
+                    if (result.status === 'success') {
+                        showToast(result.message, 'success');
+                        loadSedes();
+                    } else {
+                        alert("Error: " + result.message);
+                        document.getElementById('loader').style.display = 'none';
+                    }
+                } catch (error) {
+                    alert("Error de red");
+                    document.getElementById('loader').style.display = 'none';
+                }
+            }
+        }
+
+        function exportToExcel() {
+            let csv = 'No;Bien inmueble;Comuna;Dirección completa;Destinación o uso del bien;Ocupación por terceros;Observaciones\n';
+            sedes.forEach(sede => {
+                const clean = (text) => text ? text.toString().replace(/"/g, '""').replace(/;/g, ',') : '';
+                const linea = [
+                    sede.numero, `"${clean(sede.nombre)}"`, `"${clean(sede.comuna)}"`,
+                    `"${clean(sede.direccion)}"`, `"${clean(sede.uso)}"`,
+                    `"${clean(sede.ocupante)}"`, `"${clean(sede.observaciones)}"`
+                ].join(';');
+                csv += linea + '\n';
+            });
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `sedes_medellin_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('✅ Excel exportado', 'success');
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        document.getElementById('searchInput').addEventListener('input', render);
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') closeModal();
+        });
+
+        // Iniciar
+        loadSedes();
+    </script>
+</body>
+</html>
